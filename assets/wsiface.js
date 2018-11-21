@@ -1,5 +1,5 @@
-var pips = new WsIfaceClient("/");
-var belushi = new WsIfaceClient("/belushi");
+var WsIface = new WsIfaceClient("/");
+//var channelName = new WsIfaceClient("/channelName");
 
 function WsIfaceClient(channel) {
     channel = channel || "/";
