@@ -117,19 +117,21 @@ class Channel {
      * @param {*} name - Channel name
      */
     constructor(wsifacesrv, name) {
-        var app = wsifacesrv.app;
         this.name = name;
-        this.app = app;
+        this.wsi = wsifacesrv;
         this.clients = {};
         this.status = {};
         this.listeners = {};
-        this.app.ws(name, (ws) => {
+        this.wsi.app.ws(name, (ws) => {
             var id = genStr();
             while (this.clients[id]) { id = genStr(); }
             ws.wsiId = id;
             this.addClient(ws);
         });
-        wsifacesrv.channels[name] = this;
+        this.wsi.channels[name] = this;
+        this.on('*', data => {
+            this.wsi.logger.log('silly')
+        })
     }
 
     /**
@@ -138,8 +140,8 @@ class Channel {
      */
     addClient(wsc) {
         this.clients[wsc.wsiId] = wsc;
-        this.logger.log('info', 'Client connected on '
-                         + this.name + ': ' + wsc.wsiId);
+        this.wsi.logger.log('debug', 'Client connected on '
+                             + this.name + ': ' + wsc.wsiId);
         fEach(this.listeners, (msg, listener) => wsc.on(msg, listener));
         wsc.send(JSON.stringify({status: this.status}));
     }
