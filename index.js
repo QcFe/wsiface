@@ -130,7 +130,7 @@ class Channel {
         });
         this.wsi.channels[name] = this;
         this.on('*', data => {
-            this.wsi.logger.log('silly')
+            this.wsi.logger.log('silly', data)
         })
     }
 
@@ -178,7 +178,7 @@ class Channel {
      * @param {function} action - Desider action
      */
     on(message, action) {
-        this.listener[message] = action;
+        this.listeners[message] = action;
         this.eachClient((wsid, client) => client.on(message, action));
     }
 
