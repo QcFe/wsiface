@@ -1,5 +1,5 @@
 {
-  "name": "me.qcfe.wsiface",
+  "name": "wsiface",
   "version": "0.1.0",
   "description": "Websocket Interface base module",
   "main": "index.js",
