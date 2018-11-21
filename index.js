@@ -1,6 +1,10 @@
 const express = require('express');
 const expressWs = require('express-ws');
 
+/**
+ * @class
+ * WsIface Main class - can be found in `module.WsIfaceServer`
+ */
 class WsIfaceServer {
 
     /**
@@ -101,6 +105,10 @@ class WsIfaceServer {
     
 }
 
+/**
+ * @class
+ * Channel class - can be found in `module.WsIfaceChannel`
+ */
 class Channel {
     /**
      * Create new channel
@@ -199,6 +207,7 @@ class Channel {
 }
 
 /**
+ * @private
  * Generates random 16char string
  * @returns {string}
  */
@@ -213,6 +222,7 @@ function genStr() {
 }
 
 /**
+ * @private
  * Easy foreach for maps
  * @param {*} map 
  * @param {mapConsumer} action 
@@ -223,22 +233,17 @@ function fEach(map, action) {
     });
 }
 
-/**
- * __WsIfaceServer__ class
- */
 module.exports.WsIfaceServer = WsIfaceServer;
 module.exports.WsIfaceChannel = Channel;
 
 /**
- * Create new WsIfaceServer
+ * Module require funcions
+ * @external require('wsiface')
  */
-module.exports.newServer = (logger) => new WsIfaceServer(logger);
-
 
 /**
- * Consumer for each
- * @callback mapConsumer
- * @param {string} - Tuple key
- * @param {*} - Tuple value
- * @returns void
+ * Create new WsIfaceServer
+ * @memberof require('wsiface')
+ * @param {Winston|console} [logger] - Optional Winston or other logger, `logger.log` will be used
  */
+module.exports.newServer = (logger) => new WsIfaceServer(logger);
