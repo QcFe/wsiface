@@ -141,7 +141,7 @@ class Channel {
             this.topics['#'].listeners.forEach(l => l(msg));
 
         if (this.topics[msg.topic])
-            this.topics[msg.target].listeners.forEach(l => l(msg));
+            this.topics[msg.topic].listeners.forEach(l => l(msg));
         else
             this.wsi.logger.log('debug', 'Unhandled topic', msg);
     }
