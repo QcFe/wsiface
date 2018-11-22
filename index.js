@@ -149,13 +149,15 @@ class Channel {
     /**
      * Broadcast packet to every client in the channel
      * @param {Object} data  - Data object to be sent
+     * @returns {WsIfaceServer} - For chaining
      */
     broadcast (data) {
         if (!data.topic) {
             this.wsi.logger.log('error', 'Messages MUST include a topic');
-            return false;
+            return this;
         }
         this.eachClient(ws => ws.readyState === 1 && ws.send(JSON.stringify(data)));
+        return this;
     }
 
     /**
@@ -163,6 +165,7 @@ class Channel {
      *                              for every client
      * @param {string} message - Received message
      * @param {function} action - Desider action
+     * @returns {WsIfaceServer} - For chaining
      */
     on(topic, listener) {
         if (!this.topics[topic]) {
@@ -170,35 +173,40 @@ class Channel {
                 listeners: []
             };
         }
-        if (this.topics[topic].listeners.includes(listener)) return false;
+        if (this.topics[topic].listeners.includes(listener)) return this;
         this.topics[topic].listeners.push(listener);
-        return true;
+        return this;
     }
 
     /**
      * UNBind any action to received __message__ 
      *                              for every client
      * @param {string} topic - Received message
+     * @param {WsIfaceTopiclistener} [listener] - Callback, remove all if omitted
+     * @returns {WsIfaceServer} - For chaining
      */
     off(topic, listener) {
-        if (!this.topics[topic]) return;
+        if (!this.topics[topic]) return this;
         if (!listener) {
             delete this.topics[topic];
         } else {
             this.topics[topic].listeners = 
                 this.topics[topic].listeners.filter(h => h!= listener);
         }
+        return this;
     }
 
     /**
      * Run action on each online client and cleans list 
      *                                  from offline clients
      * @param {function} action - Desired action 
+     * @returns {WsIfaceServer} - For chaining
      */
     eachClient(action) {
         Object.values(this.clients).forEach(client => {
             action(client);
         });
+        return this;
     }
 }
 
@@ -231,3 +239,9 @@ module.exports.WsIfaceChannel = Channel;
  * @param {Winston|console} [logger] - Optional Winston or other logger, `logger.log` will be used
  */
 module.exports.newServer = (logger) => new WsIfaceServer(logger);
+
+/**
+ * WebSocket topic callback
+ * @callback WsIfaceTopiclistener
+ * @param {Object} data - Data object from server
+ */

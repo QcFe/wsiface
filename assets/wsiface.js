@@ -20,23 +20,26 @@ class WsIfaceClient {
             this.msgHandler(JSON.stringify({topic: 'connect'}));
         };
 
-        this.webSocket.onclose = () => {
+        if (this.channel == '/') this.webSocket.onclose = () => {
             this.msgHandler(JSON.stringify({topic: 'disconnect'}));
+            tryReconnect();
         };
 
-        if (this.channel == '/') this.webSocket.onclose = () => {
+        function tryReconnect() {
             setTimeout(() => {
                 hostReachable(success => {
                     if (success) location.reload();
-                    else this.webSocket.onclose();
+                    else tryReconnect();
                 });
             }, 2000);
-        };
+        }
     }
 
     /**
+     * Bind topic handler
      * @param {String} topic - Topic to which subscribe
-     * @param {WsIfaceTopiclistener} listener - Topic listener
+     * @param {WsIfaceTopiclistener} listener - Topic handler
+     * @returns {WsIfaceClient} - for chaining
      */
     on(topic, listener) {
         if (!this.topics[topic]) {
@@ -44,16 +47,33 @@ class WsIfaceClient {
                 listeners: []
             };
         }
-        if (this.topics[topic].listeners.includes(listener)) return false;
+        if (this.topics[topic].listeners.includes(listener)) return this;
         this.topics[topic].listeners.push(listener);
-        return true;
+        return this;
     }
 
+
+    /**
+     * Unbind topic handler
+     * @param {String} topic - Desired topic
+     * @param {WsIfaceTopiclistener} [listener] - Callback, remove all if omitted
+     * @returns {WsIfaceClient} - for chaining
+     */
     off(topic, listener) {
-        if (!this.topics[topic]) return;
-        this.topics[topic].listeners = this.topics[topic].listeners.filter(h => h!= listener);
+        if (!this.topics[topic]) return this;
+        if (!listener) {
+            delete this.topics[topic];
+        } else {
+            this.topics[topic].listeners = 
+                this.topics[topic].listeners.filter(h => h!= listener);
+        }
+        return this;
     }
 
+    /**
+     * Handles message reception
+     * @private
+     */
     msgHandler(msg) {
         try {
             msg = JSON.parse(msg);
@@ -74,12 +94,17 @@ class WsIfaceClient {
             console.warn('Unhandled topic: ', msg.topic, msg);
         }
     }
-    send (data) {
-        if (!data.topic) {
-            console.error('Messages MUST include a topic');
-            return false;
-        }
+
+    /**
+     * Send message to server with given `message.topic`
+     * @param {String} topic - Desired topic
+     * @param {Object} message - Must be a valid Object
+     * @returns {WsIfaceClient} - for chaining
+     */
+    send(topic, data) {
+        data.topic = topic;
         this.webSocket.send(JSON.stringify(data));
+        return this;
     }
 
 }
