@@ -117,7 +117,7 @@ class Channel {
             while (this.clients[id]) id = genStr();
             ws.wsiId = id;
             this.clients[ws.wsiId] = ws;
-            ws.on('message', this.msgHandler);
+            ws.on('message', msg => this.msgHandler(msg));
             ws.on('close', () => {
                 this.msgHandler({topic: 'disconnect', wsid: id});
                 delete this.clients[ws.wsiId];
@@ -127,12 +127,18 @@ class Channel {
     }
 
     msgHandler(msg) {
-        try {
-            msg = msg = JSON.parse(msg);
-        } catch (e) { 
-            return this.wsi.logger.log('error', 'Cannot parse message', msg); 
+        if (typeof msg == 'string') {
+            try {
+                msg = JSON.parse(msg);
+            } catch (e) {
+                this.wsi.logger.log('error', 'Messages MUST BE valid JSON objects', e, msg);
+                return false;
+            }
         }
-        
+        if (!msg.topic) {
+            this.wsi.logger.log('error', 'Messages MUST include a topic', msg);
+            return false;
+        }
         if (this.topics['#']) 
             this.topics['#'].listeners.forEach(l => l(msg));
 
@@ -151,7 +157,7 @@ class Channel {
             this.wsi.logger.log('error', 'Messages MUST include a topic');
             return false;
         }
-        this.eachClient(ws => ws.readyState === 1 && ws.send(data));
+        this.eachClient(ws => ws.readyState === 1 && ws.send(JSON.stringify(data)));
     }
 
     /**

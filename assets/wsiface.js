@@ -1,9 +1,4 @@
 /**
- * Root channel is automatically issued
- */
-const WsIfaceRootChannel = new WsIfaceClient('/');
-
-/**
  * [FRONTEND] Connect to WsIface server
  */
 class WsIfaceClient {
@@ -17,7 +12,7 @@ class WsIfaceClient {
         this.webSocket = new WebSocket('ws://' + location.host + channel);
         this.topics = {};
 
-        this.ws.onmessage = e => {
+        this.webSocket.onmessage = e => {
             var msg = e.data;
             msg = msg = JSON.parse(msg);
             if (this.topics['#']) {
@@ -26,19 +21,19 @@ class WsIfaceClient {
             if (this.topics[msg.topic]) {
                 this.topics[msg.target].listeners.forEach(l => l(msg));
             } else {
-                console.warning('Unhandled topic: ', msg.topic, msg);
+                console.warn('Unhandled topic: ', msg.topic, msg);
             }
-        }
+        };
 
-        this.ws.onopen = () => {
+        this.webSocket.onopen = () => {
             console.log('Websocket connection established for channel ' + channel);
-        }
+        };
 
-        if (this.channel == '/') this.ws.onclose = () => {
+        if (this.channel == '/') this.webSocket.onclose = () => {
             setTimeout(() => {
                 hostReachable(success => {
                     if (success) location.reload();
-                    else thisWs.onclose();
+                    else this.webSocket.onclose();
                 });
             }, 2000);
         };
@@ -76,6 +71,11 @@ function hostReachable (cb) {
     xhr.timeout = 2000;
     xhr.send();
 }
+ 
+/**
+ * Root channel is automatically issued
+ */
+window.WsIfaceRootChannel = new WsIfaceClient('/');
 
 /**
  * WebSocket topic callback
