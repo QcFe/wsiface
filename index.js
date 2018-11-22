@@ -81,17 +81,6 @@ class WsIfaceServer {
     }
 
     /**
-     * Set and push status to channel
-     * @param {Object} status - Desired status
-     * @param {string} [channel='/'] - Optional, defaults to '/', 
-     *                                  desired channel
-     */
-    setStatus(status, channel) {
-        channel = channel || '/';
-        this.channels[channel].setStatus(status);
-    }
-
-    /**
      * Bind static __folder__ to __endpoint__
      * @param {string} endpoint - Server endpoint
      * @param {string} folder - Local folder
@@ -120,55 +109,49 @@ class Channel {
         this.name = name;
         this.wsi = wsifacesrv;
         this.clients = {};
-        this.status = {};
-        this.listeners = {};
+        this.topics = {};
+        this.wsi.channels[name] = this;
+
         this.wsi.app.ws(name, (ws) => {
             var id = genStr();
-            while (this.clients[id]) { id = genStr(); }
+            while (this.clients[id]) id = genStr();
             ws.wsiId = id;
-            this.addClient(ws);
+            this.clients[ws.wsiId] = ws;
+            ws.on('message', this.msgHandler);
+            ws.on('close', () => {
+                this.msgHandler({topic: 'disconnect', wsid: id});
+                delete this.clients[ws.wsiId];
+            });
+            this.msgHandler({topic: 'connect', wsid: id});
         });
-        this.wsi.channels[name] = this;
-        this.on('*', data => {
-            this.wsi.logger.log('silly', data)
-        })
     }
 
-    /**
-     * Add a new client to the channel
-     * @param {WebSocket} wsc 
-     */
-    addClient(wsc) {
-        this.clients[wsc.wsiId] = wsc;
-        this.wsi.logger.log('debug', 'Client connected on '
-                             + this.name + ': ' + wsc.wsiId);
-        fEach(this.listeners, (msg, listener) => wsc.on(msg, listener));
-        wsc.send(JSON.stringify({status: this.status}));
-    }
+    msgHandler(msg) {
+        try {
+            msg = msg = JSON.parse(msg);
+        } catch (e) { 
+            return this.wsi.logger.log('error', 'Cannot parse message', msg); 
+        }
+        
+        if (this.topics['#']) 
+            this.topics['#'].listeners.forEach(l => l(msg));
 
-    /**
-     * Set and send status to every client in this channel
-     * @param {Object} status 
-     */
-    setStatus(status) {
-        this.status = status;
-        this.pushStatus();
-    }
-
-    /**
-     * Send status to every client in this channel
-     */
-    pushStatus() {
-        this.broadcast({status: this.status});
+        if (this.topics[msg.topic])
+            this.topics[msg.target].listeners.forEach(l => l(msg));
+        else
+            this.wsi.logger.log('debug', 'Unhandled topic', msg);
     }
 
     /**
      * Broadcast packet to every client in the channel
-     * @param {object} data  - Data object to be sent
+     * @param {Object} data  - Data object to be sent
      */
     broadcast (data) {
-        if (typeof data == 'object') data = JSON.stringify(data);
-        this.eachClient((wsid, client) => client.send(data));
+        if (!data.topic) {
+            this.wsi.logger.log('error', 'Messages MUST include a topic');
+            return false;
+        }
+        this.eachClient(ws => ws.readyState === 1 && ws.send(data));
     }
 
     /**
@@ -177,19 +160,30 @@ class Channel {
      * @param {string} message - Received message
      * @param {function} action - Desider action
      */
-    on(message, action) {
-        this.listeners[message] = action;
-        this.eachClient((wsid, client) => client.on(message, action));
+    on(topic, listener) {
+        if (!this.topics[topic]) {
+            this.topics[topic] = {
+                listeners: []
+            };
+        }
+        if (this.topics[topic].listeners.includes(listener)) return false;
+        this.topics[topic].listeners.push(listener);
+        return true;
     }
 
     /**
      * UNBind any action to received __message__ 
      *                              for every client
-     * @param {string} message - Received message
+     * @param {string} topic - Received message
      */
-    off(message) {
-        delete this.listeners[message];
-        this.eachClient((wsid, client) => client.off(message));
+    off(topic, listener) {
+        if (!this.topics[topic]) return;
+        if (!listener) {
+            delete this.topics[topic];
+        } else {
+            this.topics[topic].listeners = 
+                this.topics[topic].listeners.filter(h => h!= listener);
+        }
     }
 
     /**
@@ -198,12 +192,8 @@ class Channel {
      * @param {function} action - Desired action 
      */
     eachClient(action) {
-        fEach(this.clients, (wsid, client) => {
-            if (client.readyState !== 1) {
-                delete this.clients[wsid];
-            } else {
-                action(wsid, client);
-            }
+        Object.values(this.clients).forEach(client => {
+            action(client);
         });
     }
 }
@@ -221,18 +211,6 @@ function genStr() {
         str += _sym[Math.floor(Math.random() * len)];
 
     return str;
-}
-
-/**
- * @private
- * Easy foreach for maps
- * @param {*} map 
- * @param {mapConsumer} action 
- */
-function fEach(map, action) {
-    Object.keys(map).forEach(key => {
-        if (map.hasOwnProperty(key)) action(key, map[key]);
-    });
 }
 
 module.exports.WsIfaceServer = WsIfaceServer;
