@@ -119,21 +119,19 @@ class Channel {
             this.clients[ws.wsiId] = ws;
             ws.on('message', msg => this.msgHandler(msg));
             ws.on('close', () => {
-                this.msgHandler({topic: 'disconnect', wsid: id});
+                this.msgHandler(JSON.stringify({topic: 'disconnect', wsid: id}));
                 delete this.clients[ws.wsiId];
             });
-            this.msgHandler({topic: 'connect', wsid: id});
+            this.msgHandler(JSON.stringify({topic: 'connect', wsid: id}));
         });
     }
 
     msgHandler(msg) {
-        if (typeof msg == 'string') {
-            try {
-                msg = JSON.parse(msg);
-            } catch (e) {
-                this.wsi.logger.log('error', 'Messages MUST BE valid JSON objects', e, msg);
-                return false;
-            }
+        try {
+            msg = JSON.parse(msg);
+        } catch (e) {
+            this.wsi.logger.log('error', 'Messages MUST BE valid JSON objects', e, msg);
+            return false;
         }
         if (!msg.topic) {
             this.wsi.logger.log('error', 'Messages MUST include a topic', msg);

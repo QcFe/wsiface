@@ -13,20 +13,15 @@ class WsIfaceClient {
         this.topics = {};
 
         this.webSocket.onmessage = e => {
-            var msg = e.data;
-            msg = msg = JSON.parse(msg);
-            if (this.topics['#']) {
-                this.topics['#'].listeners.forEach(l => l(msg));
-            }
-            if (this.topics[msg.topic]) {
-                this.topics[msg.target].listeners.forEach(l => l(msg));
-            } else {
-                console.warn('Unhandled topic: ', msg.topic, msg);
-            }
+            this.msgHandler(e.data);
         };
 
         this.webSocket.onopen = () => {
-            console.log('Websocket connection established for channel ' + channel);
+            this.msgHandler(JSON.stringify({topic: 'connect'}));
+        };
+
+        this.webSocket.onclose = () => {
+            this.msgHandler(JSON.stringify({topic: 'disconnect'}));
         };
 
         if (this.channel == '/') this.webSocket.onclose = () => {
@@ -58,6 +53,35 @@ class WsIfaceClient {
         if (!this.topics[topic]) return;
         this.topics[topic].listeners = this.topics[topic].listeners.filter(h => h!= listener);
     }
+
+    msgHandler(msg) {
+        try {
+            msg = JSON.parse(msg);
+        } catch (e) {
+            console.error('Messages MUST BE valid JSON objects', e, msg);
+            return false;
+        }
+        if (!msg.topic) {
+            console.error('Messages MUST include a topic', msg);
+            return false;
+        }
+        if (this.topics['#']) {
+            this.topics['#'].listeners.forEach(l => l(msg));
+        }
+        if (this.topics[msg.topic]) {
+            this.topics[msg.target].listeners.forEach(l => l(msg));
+        } else {
+            console.warn('Unhandled topic: ', msg.topic, msg);
+        }
+    }
+    send (data) {
+        if (!data.topic) {
+            console.error('Messages MUST include a topic');
+            return false;
+        }
+        this.webSocket.send(JSON.stringify(data));
+    }
+
 }
 
 /**
