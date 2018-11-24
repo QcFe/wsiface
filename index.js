@@ -9,11 +9,12 @@ class WsIfaceServer {
 
     /**
      * Instantiate WsIfaceServer
+     * @param {Winston|Console} [logger]
      */
-    constructor (winstonLogger) {
+    constructor (logger) {
         this.app = express();
         this.ews = expressWs(this.app);
-        this.logger = winstonLogger || console;
+        this.logger = logger || console;
         this.channels = {};
     }
 
@@ -48,36 +49,43 @@ class WsIfaceServer {
 
     /**
      * Bind __action__ to received __message__ for every client
-     * @param {string} message - Received message
-     * @param {function} action - Desired action
+     * @param {String} topic - Topic of the message
+     * @param {WsIfaceServer} listener - Desired action
      * @param {string} [channel='/'] - Optional, defaults to '/', 
      *                                  desired channel
+     * @returns {WsIfaceServer} - For chaining
      */
-    on(message, action, channel) {
+    on(topic, action, channel) {
         channel = channel || '/';
-        this.channels[channel].on(message, action);
+        this.channels[channel].on(topic, action);
+        return this;
     }
 
     /**
      * UNBind any action to received __message__ for every client
-     * @param {string} message - Received message
-     * @param {string} [channel='/'] - Optional, defaults to '/', 
+     * @param {String} topic - Topic of the message
+     * @param {string} [channel='/'] - Optional, defaults to '/',
      *                                  desired channel
+     * @param {WsIfaceTopiclistener} [listener] - Optional callback, remove all if omitted
+     * @returns {WsIfaceServer} - For chaining
      */
-    off(message, channel) {
+    off(topic, channel, listener) {
         channel = channel || '/';
-        this.channels[channel].off(message);
+        this.channels[channel].off(message, listener);
+        return this;
     }
-
+    
     /**
      * Broadcast packet to every client in a channel
      * @param {object} data  - Data object to be sent
      * @param {string} [channel='/'] - Optional, defaults to '/', 
      *                                  desired channel
+     * @returns {WsIfaceServer} - For chaining
      */
     broadcast (data, channel) {
         channel = channel || '/';
         this.channels[channel].broadcast(data);
+        return this;
     }
 
     /**
@@ -101,13 +109,13 @@ class WsIfaceServer {
 class Channel {
     /**
      * Create new channel
-     * @param {Express} app - Express app 
+     * @param {WsIfaceServer} wsi - Express app
      *                      (required express-ws binding)
-     * @param {*} name - Channel name
+     * @param {String} name - Channel name
      */
-    constructor(wsifacesrv, name) {
+    constructor(wsi, name) {
         this.name = name;
-        this.wsi = wsifacesrv;
+        this.wsi = wsi;
         this.clients = {};
         this.topics = {};
         this.wsi.channels[name] = this;
@@ -149,7 +157,7 @@ class Channel {
     /**
      * Broadcast packet to every client in the channel
      * @param {Object} data  - Data object to be sent
-     * @returns {WsIfaceServer} - For chaining
+     * @returns {Channel} - For chaining
      */
     broadcast (data) {
         if (!data.topic) {
@@ -163,9 +171,9 @@ class Channel {
     /**
      * Bind specified __action__ to received __message__ 
      *                              for every client
-     * @param {string} message - Received message
-     * @param {function} action - Desider action
-     * @returns {WsIfaceServer} - For chaining
+     * @param {String} topic - Topic of the message
+     * @param {WsIfaceTopiclistener} listener - Topic handler
+     * @returns {Channel} - For chaining
      */
     on(topic, listener) {
         if (!this.topics[topic]) {
@@ -181,9 +189,9 @@ class Channel {
     /**
      * UNBind any action to received __message__ 
      *                              for every client
-     * @param {string} topic - Received message
+     * @param {String} topic - Topic of the message
      * @param {WsIfaceTopiclistener} [listener] - Callback, remove all if omitted
-     * @returns {WsIfaceServer} - For chaining
+     * @returns {Channel} - For chaining
      */
     off(topic, listener) {
         if (!this.topics[topic]) return this;
@@ -200,7 +208,7 @@ class Channel {
      * Run action on each online client and cleans list 
      *                                  from offline clients
      * @param {function} action - Desired action 
-     * @returns {WsIfaceServer} - For chaining
+     * @returns {Channel} - For chaining
      */
     eachClient(action) {
         Object.values(this.clients).forEach(client => {
@@ -241,7 +249,13 @@ module.exports.WsIfaceChannel = Channel;
 module.exports.newServer = (logger) => new WsIfaceServer(logger);
 
 /**
- * WebSocket topic callback
+ * WebSocket topic handler
  * @callback WsIfaceTopiclistener
- * @param {Object} data - Data object from server
+ * @param {Object} data - Object containing received data 
+ */
+
+
+/**
+ * Node module providing a logger, see docs on <a href="https://www.npmjs.com/package/winston" target="_blank">npmjs.com</a>
+ * @external Winston
  */
