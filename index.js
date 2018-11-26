@@ -72,7 +72,7 @@ class WsIfaceServer {
      */
     off(topic, channel, listener) {
         channel = channel || '/';
-        this.channels[channel].off(message, listener);
+        this.channels[channel].off(topic, listener);
         return this;
     }
     
