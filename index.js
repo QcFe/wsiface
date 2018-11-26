@@ -30,7 +30,7 @@ class WsIfaceServer {
      * Start WsIfaceServer on port p
      * @param {number} p 
      */
-    start (p) {
+    start (p, cb) {
         this.port = p;
 
         this.bindStatic('/wsiface', __dirname + '/assets');
@@ -41,9 +41,10 @@ class WsIfaceServer {
             res.sendStatus(200);
         });
 
-        return this.app.listen(this.port, () => {
+        return this.server = this.app.listen(this.port, () => {
             this.logger.log('info', 'WsIfaceServer started on port \x1b[32m' 
                                         + this.port + '\x1b[0m');
+            typeof cb == 'function' && cb(this);
         });
     }
 
