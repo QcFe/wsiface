@@ -13,6 +13,7 @@ class WsIfaceServer {
      */
     constructor (logger) {
         this.app = express();
+        this.app.use(express.json());
         this.ews = expressWs(this.app);
         this.logger = logger || console;
         this.channels = {};
