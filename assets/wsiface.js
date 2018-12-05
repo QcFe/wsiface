@@ -122,11 +122,6 @@ function hostReachable (cb) {
 }
  
 /**
- * Root channel is automatically issued
- */
-window.WsIfaceRootChannel = new WsIfaceClient('/');
-
-/**
  * WebSocket topic callback
  * @callback WsIfaceTopiclistener
  * @param {Object} data - Data object from server
