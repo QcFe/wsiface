@@ -7,7 +7,7 @@ class WsIfaceClient {
      * @param {String} channel 
      */
     constructor (channel) {
-        channel || '/';
+        channel = channel || '/';
         this.channel = channel;
         this.webSocket = new WebSocket('ws://' + location.host + channel);
         this.topics = {};
@@ -126,3 +126,7 @@ function hostReachable (cb) {
  * @callback WsIfaceTopiclistener
  * @param {Object} data - Data object from server
  */
+
+try {
+    module.exports.WsIfaceClient = WsIfaceClient;
+} catch (e) { e; }

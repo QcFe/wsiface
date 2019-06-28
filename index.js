@@ -237,6 +237,7 @@ function genStr() {
 
 module.exports.WsIfaceServer = WsIfaceServer;
 module.exports.WsIfaceChannel = Channel;
+module.exports.WsIfaceClient = require('./assets/wsiface').WsIfaceClient;
 
 /**
  * Module require funcions
