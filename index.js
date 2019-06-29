@@ -127,16 +127,16 @@ class Channel {
             while (this.clients[id]) id = genStr();
             ws.wsiId = id;
             this.clients[ws.wsiId] = ws;
-            ws.on('message', msg => this.msgHandler(msg));
+            ws.on('message', msg => this.msgHandler(msg, ws));
             ws.on('close', () => {
-                this.msgHandler(JSON.stringify({topic: 'disconnect', wsid: id}));
+                this.msgHandler(JSON.stringify({topic: 'disconnect', wsid: id}), ws);
                 delete this.clients[ws.wsiId];
             });
             this.msgHandler(JSON.stringify({topic: 'connect', wsid: id}));
         });
     }
 
-    msgHandler(msg) {
+    msgHandler(msg, ws) {
         try {
             msg = JSON.parse(msg);
         } catch (e) {
@@ -148,10 +148,10 @@ class Channel {
             return false;
         }
         if (this.topics['#']) 
-            this.topics['#'].listeners.forEach(l => l(msg));
+            this.topics['#'].listeners.forEach(l => l(msg, ws));
 
         if (this.topics[msg.topic])
-            this.topics[msg.topic].listeners.forEach(l => l(msg));
+            this.topics[msg.topic].listeners.forEach(l => l(msg, ws));
         else
             this.wsi.logger.log('debug', 'Unhandled topic', msg);
     }
@@ -255,6 +255,7 @@ module.exports.newServer = (logger) => new WsIfaceServer(logger);
  * WebSocket topic handler
  * @callback WsIfaceTopiclistener
  * @param {Object} data - Object containing received data 
+ * @param {WebSocket} - Source websocket
  */
 
 
