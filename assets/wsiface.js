@@ -102,6 +102,7 @@ class WsIfaceClient {
      * @returns {WsIfaceClient} - for chaining
      */
     send(topic, data) {
+        data = data || {};
         data.topic = topic;
         this.webSocket.send(JSON.stringify(data));
         return this;

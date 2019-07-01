@@ -91,6 +91,20 @@ class WsIfaceServer {
     }
 
     /**
+     * Broadcast packet to every client in a channel
+     * @param {string} topic - Given topic
+     * @param {object} data  - Data object to be sent
+     * @param {string} [channel='/'] - Optional, defaults to '/',
+     *                                  desired channel
+     * @returns {WsIfaceServer} - For chaining
+     */
+    sendAll(topic, data, channel) {
+        channel = channel || '/';
+        this.channels[channel].sendAll(topic, data);
+        return this;
+    }
+
+    /**
      * Bind static __folder__ to __endpoint__
      * @param {string} endpoint - Server endpoint
      * @param {string} folder - Local folder
@@ -132,7 +146,7 @@ class Channel {
                 this.msgHandler(JSON.stringify({topic: 'disconnect', wsid: id}), ws);
                 delete this.clients[ws.wsiId];
             });
-            this.msgHandler(JSON.stringify({topic: 'connect', wsid: id}));
+            this.msgHandler(JSON.stringify({topic: 'connect', wsid: id}), ws);
         });
     }
 
@@ -161,13 +175,25 @@ class Channel {
      * @param {Object} data  - Data object to be sent
      * @returns {Channel} - For chaining
      */
-    broadcast (data) {
+    broadcast(data) {
         if (!data.topic) {
             this.wsi.logger.log('error', 'Messages MUST include a topic');
             return this;
         }
         this.eachClient(ws => ws.readyState === 1 && ws.send(JSON.stringify(data)));
         return this;
+    }
+
+    /**
+     * Broadcast packet to every client in the channel
+     * @param {String} topic - Given topic
+     * @param {Object} data  - Data object to be sent
+     * @returns {Channel} - For chaining
+     */
+    sendAll(topic, data) {
+        data = data || {};
+        data.topic = topic;
+        this.broadcast(data);
     }
 
     /**
