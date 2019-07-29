@@ -1,6 +1,6 @@
 {
   "name": "wsiface",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Websocket Interface base module",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
   "author": "QcFe",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.16.3",
+    "express": "^4.17.1",
     "express-ws": "^4.0.0"
   },
   "repository": {

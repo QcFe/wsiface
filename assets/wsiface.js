@@ -9,31 +9,41 @@ class WsIfaceClient {
     constructor (channel) {
         channel = channel || '/';
         this.channel = channel;
-        this.webSocket = new WebSocket('ws://' + location.host + channel);
         this.topics = {};
         this.reconnectHandler = () => location.reload();
 
-        this.webSocket.onmessage = e => {
-            this.msgHandler(e.data);
-        };
+        const _this = this;
 
-        this.webSocket.onopen = () => {
-            this.msgHandler(JSON.stringify({topic: 'connect'}));
-        };
+        function createWs() {
+            _this.webSocket = new WebSocket('ws://' + location.host + channel);
 
-        if (this.channel == '/') this.webSocket.onclose = () => {
-            this.msgHandler(JSON.stringify({topic: 'disconnect'}));
-            tryReconnect();
-        };
+            _this.webSocket.onmessage = e => {
+                _this.msgHandler(e.data);
+            };
+
+            _this.webSocket.onopen = () => {
+                _this.msgHandler(JSON.stringify({ topic: 'connect' }));
+            };
+
+            if (_this.channel == '/') _this.webSocket.onclose = () => {
+                _this.msgHandler(JSON.stringify({ topic: 'disconnect' }));
+                tryReconnect();
+            };
+        }
 
         function tryReconnect() {
             setTimeout(() => {
                 hostReachable(success => {
-                    if (success) this.reconnectHandler();
+                    if (success) {
+                        _this.reconnectHandler();
+                        createWs();
+                    }
                     else tryReconnect();
                 });
             }, 2000);
         }
+
+        createWs();
     }
 
     /**
