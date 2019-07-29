@@ -11,6 +11,7 @@ class WsIfaceClient {
         this.channel = channel;
         this.webSocket = new WebSocket('ws://' + location.host + channel);
         this.topics = {};
+        this.reconnectHandler = () => location.reload();
 
         this.webSocket.onmessage = e => {
             this.msgHandler(e.data);
@@ -28,7 +29,7 @@ class WsIfaceClient {
         function tryReconnect() {
             setTimeout(() => {
                 hostReachable(success => {
-                    if (success) location.reload();
+                    if (success) this.reconnectHandler();
                     else tryReconnect();
                 });
             }, 2000);
@@ -52,6 +53,13 @@ class WsIfaceClient {
         return this;
     }
 
+    /**
+     * Specify what to do on reconnection
+     * @param {Function} handler 
+     */
+    onReconnect(handler) {
+        this.reconnectHandler = handler;
+    }
 
     /**
      * Unbind topic handler
