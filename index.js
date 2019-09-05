@@ -11,7 +11,7 @@ class WsIfaceServer {
      * Instantiate WsIfaceServer
      * @param {Winston|Console} [logger]
      */
-    constructor (logger) {
+    constructor(logger) {
         this.app = express();
         this.app.use(express.json());
         this.ews = expressWs(this.app);
@@ -26,12 +26,12 @@ class WsIfaceServer {
     createChannel(name) {
         return new Channel(this, name);
     }
-    
+
     /**
      * Start WsIfaceServer on port p
      * @param {number} p 
      */
-    start (p, cb) {
+    start(p, cb) {
         this.port = p;
 
         this.bindStatic('/wsiface', __dirname + '/assets');
@@ -43,8 +43,8 @@ class WsIfaceServer {
         });
 
         return this.server = this.app.listen(this.port, () => {
-            this.logger.log('info', 'WsIfaceServer started on port \x1b[32m' 
-                                        + this.port + '\x1b[0m');
+            this.logger.log('info', 'WsIfaceServer started on port \x1b[32m'
+                + this.port + '\x1b[0m');
             typeof cb == 'function' && cb(this);
         });
     }
@@ -76,7 +76,7 @@ class WsIfaceServer {
         this.channels[channel].off(topic, listener);
         return this;
     }
-    
+
     /**
      * Broadcast packet to every client in a channel
      * @param {object} data  - Data object to be sent
@@ -84,7 +84,7 @@ class WsIfaceServer {
      *                                  desired channel
      * @returns {WsIfaceServer} - For chaining
      */
-    broadcast (data, channel) {
+    broadcast(data, channel) {
         channel = channel || '/';
         this.channels[channel].broadcast(data);
         return this;
@@ -109,13 +109,13 @@ class WsIfaceServer {
      * @param {string} endpoint - Server endpoint
      * @param {string} folder - Local folder
      */
-    bindStatic (endpoint, folder) {
-        this.logger.log('info', 
+    bindStatic(endpoint, folder) {
+        this.logger.log('info',
             'Binding folder <' + folder + '> to ' + endpoint);
         return this.app.use(endpoint, express.static(folder));
     }
 
-    
+
 }
 
 /**
@@ -143,10 +143,10 @@ class Channel {
             this.clients[ws.wsiId] = ws;
             ws.on('message', msg => this.msgHandler(msg, ws));
             ws.on('close', () => {
-                this.msgHandler(JSON.stringify({topic: 'disconnect', wsid: id}), ws);
+                this.msgHandler(JSON.stringify({ topic: 'disconnect', wsid: id }), ws);
                 delete this.clients[ws.wsiId];
             });
-            this.msgHandler(JSON.stringify({topic: 'connect', wsid: id}), ws);
+            this.msgHandler(JSON.stringify({ topic: 'connect', wsid: id }), ws);
         });
     }
 
@@ -161,11 +161,20 @@ class Channel {
             this.wsi.logger.log('error', 'Messages MUST include a topic', msg);
             return false;
         }
-        if (this.topics['#']) 
-            this.topics['#'].listeners.forEach(l => l(msg, ws));
+        if (this.topics['#']) {
+            try {
+                this.topics['#'].listeners.forEach(l => l(msg, ws));
+            } catch (e) {
+                this.wsi.logger.log('error', `WsIface exception in topic handler! topic: '#' - ${e.name}: ${e.message} \n${e.stack}`);
+            }
+        }
 
         if (this.topics[msg.topic])
-            this.topics[msg.topic].listeners.forEach(l => l(msg, ws));
+            try {
+                this.topics[msg.topic].listeners.forEach(l => l(msg, ws));
+            } catch (e) {
+                this.wsi.logger.log('error', `WsIface exception in topic handler! topic: '${msg.topic}' - ${e.name}: ${e.message} \n${e.stack}`);
+            }
         else
             this.wsi.logger.log('debug', 'Unhandled topic', msg);
     }
@@ -226,8 +235,8 @@ class Channel {
         if (!listener) {
             delete this.topics[topic];
         } else {
-            this.topics[topic].listeners = 
-                this.topics[topic].listeners.filter(h => h!= listener);
+            this.topics[topic].listeners =
+                this.topics[topic].listeners.filter(h => h != listener);
         }
         return this;
     }
@@ -252,10 +261,10 @@ class Channel {
  * @returns {string}
  */
 function genStr() {
-    var _sym = 'abcdefghijklmnopqrstuvwxyz1234567890', 
+    var _sym = 'abcdefghijklmnopqrstuvwxyz1234567890',
         str = '', len = _sym.length;
 
-    for(var i = 0; i < 16; i++)
+    for (var i = 0; i < 16; i++)
         str += _sym[Math.floor(Math.random() * len)];
 
     return str;
@@ -280,7 +289,7 @@ module.exports.newServer = (logger) => new WsIfaceServer(logger);
 /**
  * WebSocket topic handler
  * @callback WsIfaceTopiclistener
- * @param {Object} data - Object containing received data 
+ * @param {Object} data - Object containing received data
  * @param {WebSocket} - Source websocket
  */
 
